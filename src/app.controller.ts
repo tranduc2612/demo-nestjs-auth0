@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, UseGuards } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/auth.guard';
 import { RedisService } from './redis/redis.service';
@@ -27,7 +27,7 @@ export class AppController {
 
   @Delete('delete')
   async deleteCache() {
-    await this.redisService.del('greeting');
+    await this.redisService.del('room1');
     return { message: 'Data deleted from Redis' };
   }
 }

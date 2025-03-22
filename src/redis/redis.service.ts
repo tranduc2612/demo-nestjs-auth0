@@ -1,9 +1,21 @@
-import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 
 @Injectable()
-export class RedisService implements OnModuleDestroy {
-  constructor(@Inject('REDIS_CLIENT') private readonly redisClient: Redis) {}
+export class RedisService implements OnModuleInit, OnModuleDestroy {
+  private subscriber: Redis;
+
+  constructor(@Inject('REDIS_CLIENT') private readonly redisClient: Redis) {
+    // Tạo một subscriber riêng biệt
+    this.subscriber = new Redis({
+      host: 'localhost',
+      port: 6379,
+    });
+
+    this.subscriber.on('error', (err) => {
+      console.error('Redis Subscriber Error:', err);
+    });
+  }
 
   async set(key: string, value: any, ttl?: number) {
     const data = JSON.stringify(value);
@@ -32,16 +44,25 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async subscribe(channel: string, callback: (message: any) => void) {
-    const subscriber = new Redis();
-    await subscriber.subscribe(channel);
-    subscriber.on('message', (ch, message) => {
+    await this.subscriber.subscribe(channel);
+    this.subscriber.on('message', (ch, message) => {
       if (ch === channel) {
         callback(JSON.parse(message));
       }
     });
   }
 
+  async unsubscribe(channel: string) {
+    await this.subscriber.unsubscribe(channel);
+  }
+
+  onModuleInit() {
+    console.log('RedisService initialized');
+  }
+
   onModuleDestroy() {
+    console.log('Closing Redis connections...');
     this.redisClient.quit();
+    this.subscriber.quit();
   }
 }
